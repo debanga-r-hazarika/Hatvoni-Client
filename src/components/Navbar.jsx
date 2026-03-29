@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const navLinks = [
   { to: '/', label: 'Home' },
@@ -14,12 +15,20 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+    setMenuOpen(false);
+  };
 
   return (
     <header
@@ -62,9 +71,36 @@ export default function Navbar() {
             <span className="material-symbols-outlined text-xl">shopping_cart</span>
             <span className="absolute -top-0.5 -right-0.5 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">2</span>
           </Link>
-          <Link to="/profile" className="p-2 text-primary hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
-            <span className="material-symbols-outlined text-xl">person</span>
-          </Link>
+
+          {user ? (
+            <>
+              <Link to="/profile" className="p-2 text-primary hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+                <span className="material-symbols-outlined text-xl">person</span>
+              </Link>
+              <button
+                onClick={handleSignOut}
+                className="hidden md:block ml-2 px-4 py-2 text-sm font-headline font-semibold text-primary hover:bg-surface-container-low rounded-lg transition-colors"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <div className="hidden md:flex items-center space-x-2 ml-2">
+              <Link
+                to="/login"
+                className="px-4 py-2 text-sm font-headline font-semibold text-primary hover:bg-surface-container-low rounded-lg transition-colors"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                className="px-4 py-2 text-sm font-headline font-semibold bg-secondary text-white hover:bg-secondary/90 rounded-lg transition-colors"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
+
           {/* Mobile Menu Toggle */}
           <button
             className="md:hidden p-2 text-primary"
@@ -94,19 +130,35 @@ export default function Navbar() {
               {link.label}
             </NavLink>
           ))}
-          <div className="flex gap-6 pt-4 border-t border-outline-variant/30">
+          <div className="flex flex-col gap-4 pt-4 border-t border-outline-variant/30">
             <Link to="/wishlist" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
               <span className="material-symbols-outlined text-lg">favorite</span> Wishlist
             </Link>
             <Link to="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
               <span className="material-symbols-outlined text-lg">shopping_cart</span> Cart
             </Link>
-            <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
-              <span className="material-symbols-outlined text-lg">person</span> Profile
-            </Link>
-            <Link to="/orders" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
-              <span className="material-symbols-outlined text-lg">package_2</span> Orders
-            </Link>
+            {user ? (
+              <>
+                <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
+                  <span className="material-symbols-outlined text-lg">person</span> Profile
+                </Link>
+                <Link to="/orders" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
+                  <span className="material-symbols-outlined text-lg">package_2</span> Orders
+                </Link>
+                <button onClick={handleSignOut} className="flex items-center gap-2 text-primary font-headline font-bold text-sm text-left">
+                  <span className="material-symbols-outlined text-lg">logout</span> Logout
+                </button>
+              </>
+            ) : (
+              <div className="flex flex-col gap-3 pt-2">
+                <Link to="/login" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
+                  <span className="material-symbols-outlined text-lg">login</span> Login
+                </Link>
+                <Link to="/signup" onClick={() => setMenuOpen(false)} className="px-4 py-2 bg-secondary text-white font-headline font-bold text-sm rounded-lg text-center">
+                  Sign Up
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
