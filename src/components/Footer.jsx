@@ -9,10 +9,10 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="lg:col-span-4 pr-4">
             <Link to="/" className="block mb-4">
-              <img 
-                src="/logo/Fotter%20Logo%20(White).png" 
-                alt="Hatvoni" 
-                className="h-[66px] sm:h-[75px] object-contain object-left" 
+              <img
+                src="/logo/footer-logo-white.png"
+                alt="Hatvoni"
+                className="h-[66px] sm:h-[75px] object-contain object-left"
               />
             </Link>
             <p className="font-bold text-white text-[13px] tracking-widest mb-4">
