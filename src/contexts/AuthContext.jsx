@@ -24,25 +24,40 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (!error && data) {
-      setProfile(data);
-      setIsAdmin(data.is_admin || false);
-    } else {
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setProfile(null);
+        setIsAdmin(false);
+        return;
+      }
+
+      if (data) {
+        setProfile(data);
+        setIsAdmin(data.is_admin === true);
+        console.log('Profile loaded:', { email: data.email, isAdmin: data.is_admin });
+      } else {
+        console.warn('No profile found for user:', userId);
+        setProfile(null);
+        setIsAdmin(false);
+      }
+    } catch (err) {
+      console.error('Exception fetching profile:', err);
       setProfile(null);
       setIsAdmin(false);
     }
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
-      fetchProfile(session?.user?.id);
+      await fetchProfile(session?.user?.id);
       setLoading(false);
     });
 

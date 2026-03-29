@@ -24,6 +24,17 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      console.log('Navbar - User state:', {
+        email: user.email,
+        isAdmin,
+        profileLoaded: !!profile,
+        profileIsAdmin: profile?.is_admin
+      });
+    }
+  }, [user, profile, isAdmin]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');

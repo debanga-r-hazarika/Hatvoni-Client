@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
 export default function Admin() {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, loading, profile, user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('users');
   const [data, setData] = useState([]);
@@ -13,10 +13,12 @@ export default function Admin() {
   const [editingItem, setEditingItem] = useState(null);
 
   useEffect(() => {
+    console.log('Admin page - Auth state:', { loading, isAdmin, hasProfile: !!profile, hasUser: !!user });
     if (!loading && !isAdmin) {
+      console.log('Redirecting non-admin user to home');
       navigate('/');
     }
-  }, [isAdmin, loading, navigate]);
+  }, [isAdmin, loading, profile, user, navigate]);
 
   useEffect(() => {
     if (isAdmin) {
