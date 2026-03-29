@@ -42,8 +42,8 @@ export default function Navbar() {
   };
 
   const getUserDisplayName = () => {
-    if (profile?.full_name) {
-      return profile.full_name.split(' ')[0];
+    if (profile?.first_name) {
+      return profile.first_name;
     }
     if (user?.email) {
       return user.email.split('@')[0];

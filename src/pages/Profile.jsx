@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { addressService } from '../services/addressService';
+import AddressModal from '../components/AddressModal';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState('Personal Details');
@@ -9,8 +12,13 @@ export default function Profile() {
   const [sms, setSms] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [addresses, setAddresses] = useState([]);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
   const [formData, setFormData] = useState({
-    full_name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     phone: ''
   });
@@ -23,6 +31,7 @@ export default function Profile() {
       return;
     }
     fetchProfile();
+    fetchAddresses();
   }, [user, navigate]);
 
   const fetchProfile = async () => {
@@ -38,7 +47,8 @@ export default function Profile() {
       if (data) {
         setProfile(data);
         setFormData({
-          full_name: data.full_name || '',
+          first_name: data.first_name || '',
+          last_name: data.last_name || '',
           email: data.email || user.email || '',
           phone: data.phone || ''
         });
@@ -47,6 +57,15 @@ export default function Profile() {
       console.error('Error fetching profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAddresses = async () => {
+    try {
+      const data = await addressService.getAddresses(user.id);
+      setAddresses(data);
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
     }
   };
 
@@ -62,7 +81,8 @@ export default function Profile() {
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: formData.full_name,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
           phone: formData.phone,
           updated_at: new Date().toISOString()
         })
@@ -83,6 +103,44 @@ export default function Profile() {
     navigate('/');
   };
 
+  const handleAddAddress = () => {
+    setEditingAddress(null);
+    setShowAddressModal(true);
+  };
+
+  const handleEditAddress = (address) => {
+    setEditingAddress(address);
+    setShowAddressModal(true);
+  };
+
+  const handleSaveAddress = async (addressData) => {
+    try {
+      if (editingAddress) {
+        await addressService.updateAddress(editingAddress.id, addressData);
+      } else {
+        await addressService.createAddress(user.id, addressData);
+      }
+      await fetchAddresses();
+      setShowAddressModal(false);
+      setEditingAddress(null);
+    } catch (error) {
+      console.error('Error saving address:', error);
+      alert('Failed to save address');
+    }
+  };
+
+  const handleDeleteAddress = async (addressId) => {
+    if (!confirm('Are you sure you want to delete this address?')) return;
+
+    try {
+      await addressService.deleteAddress(addressId);
+      await fetchAddresses();
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      alert('Failed to delete address');
+    }
+  };
+
   const isAdmin = profile?.is_admin === true;
 
   const sidebarLinks = [
@@ -92,6 +150,11 @@ export default function Profile() {
     ...(isAdmin ? [{ label: 'Admin Panel', href: '/admin', icon: 'admin_panel_settings', active: false, admin: true }] : []),
     { label: 'Log Out', onClick: handleLogout, icon: 'logout', active: false, danger: true },
   ];
+
+  const getFullName = () => {
+    const parts = [formData.first_name, formData.last_name].filter(Boolean);
+    return parts.length > 0 ? parts.join(' ') : 'User';
+  };
 
   if (loading) {
     return (
@@ -108,16 +171,13 @@ export default function Profile() {
   return (
     <main className="pt-24 pb-20">
       <div className="max-w-screen-xl mx-auto px-6 md:px-12 py-8 md:py-16">
-        {/* Hero Heading */}
         <div className="mb-10 md:mb-16">
           <h1 className="font-brand text-5xl md:text-8xl text-primary leading-none tracking-tighter uppercase">My Profile</h1>
           <div className="w-24 md:w-32 h-1.5 md:h-2 bg-secondary mt-4 md:mt-6" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 md:gap-16">
-          {/* Sidebar */}
           <aside className="space-y-8 md:space-y-12">
-            {/* Mobile: tab pills */}
             <div className="flex gap-2 flex-wrap lg:hidden">
               {sidebarLinks.filter(l => !l.danger).map(l => (
                 <button key={l.label} onClick={() => setActiveTab(l.label)}
@@ -126,7 +186,6 @@ export default function Profile() {
                 </button>
               ))}
             </div>
-            {/* Desktop: sidebar nav */}
             <nav className="hidden lg:flex flex-col space-y-4">
               {sidebarLinks.map(link => (
                 link.onClick ? (
@@ -144,7 +203,6 @@ export default function Profile() {
                 )
               ))}
             </nav>
-            {/* Rewards Card */}
             <div className="bg-surface-container-low p-6 md:p-8 rounded-xl border-l-4 border-secondary">
               <p className="font-headline font-bold text-primary-container mb-1 text-sm">Heritage Rewards</p>
               <p className="text-xs uppercase tracking-widest text-on-surface-variant font-medium">You have earned</p>
@@ -152,9 +210,7 @@ export default function Profile() {
             </div>
           </aside>
 
-          {/* Main Content */}
           <section className="space-y-16 md:space-y-24">
-            {/* Personal Information */}
             <div>
               <h2 className="font-headline text-2xl md:text-3xl font-extrabold text-on-surface mb-8 md:mb-10 tracking-tight">Personal Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -162,13 +218,25 @@ export default function Profile() {
                   <div className="absolute top-0 right-0 p-4 opacity-10"><span className="material-symbols-outlined text-7xl md:text-8xl">ecg_heart</span></div>
                   <div className="space-y-5 md:space-y-6">
                     <div className="border-b border-outline-variant pb-2">
-                      <label className="block text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-1">Full Name</label>
+                      <label className="block text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-1">First Name</label>
                       <input
                         className="w-full bg-transparent border-none p-0 text-lg md:text-xl font-headline font-semibold focus:ring-0 text-on-surface outline-none"
                         type="text"
-                        name="full_name"
-                        value={formData.full_name}
+                        name="first_name"
+                        value={formData.first_name}
                         onChange={handleInputChange}
+                        placeholder="First name"
+                      />
+                    </div>
+                    <div className="border-b border-outline-variant pb-2">
+                      <label className="block text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-1">Last Name</label>
+                      <input
+                        className="w-full bg-transparent border-none p-0 text-lg md:text-xl font-headline font-semibold focus:ring-0 text-on-surface outline-none"
+                        type="text"
+                        name="last_name"
+                        value={formData.last_name}
+                        onChange={handleInputChange}
+                        placeholder="Last name"
                       />
                     </div>
                     <div className="border-b border-outline-variant pb-2">
@@ -199,7 +267,6 @@ export default function Profile() {
                     Save Changes
                   </button>
                 </div>
-                {/* Profile portrait */}
                 <div className="relative rounded-xl overflow-hidden aspect-square md:aspect-auto min-h-[200px]">
                   <img className="w-full h-full object-cover grayscale-[30%] brightness-90" alt="Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOFE6PMZ2XT8noFc0xQkFdg45aKtiFGJ0FWy3Db-AyVzj5rYcYfhkqx-qmOAN6jIt1SuDmWIZMxTuDDaYxaZtzK_oA3OBh4alCStH6r4d9a7PpzMFGSG6RP7Cvv6mujTD5bF6PZH34FMlFc9Nj8ov-jlP0A2HVyRdHUV_OjFV0rEe92lRwo28rzroDEg1zr378ooZetc3QxI6gj12tU2LhpYDCuAgYqxW86YpZngfEOS43zc62uEFEaaF70-a8iuAMHtzf795jVEcN" />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex items-end p-6 md:p-8">
@@ -212,67 +279,110 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* Address Book */}
             <div>
               <div className="flex justify-between items-end mb-8 md:mb-10">
                 <h2 className="font-headline text-2xl md:text-3xl font-extrabold text-on-surface tracking-tight">Address Book</h2>
-                <button className="flex items-center space-x-2 text-secondary hover:text-on-secondary-fixed-variant transition-colors group">
+                <button
+                  onClick={handleAddAddress}
+                  className="flex items-center space-x-2 text-secondary hover:text-on-secondary-fixed-variant transition-colors group"
+                >
                   <span className="material-symbols-outlined">add_circle</span>
                   <span className="font-headline font-bold uppercase text-xs tracking-widest hidden md:inline">Add New Address</span>
                 </button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                {[
-                  { tag: 'Default Shipping', tagClass: 'bg-secondary-container text-on-secondary-container', title: 'Home', address: '42, Orchid Meadows,\nMG Road Extension, North Guwahati,\nAssam - 781001, India' },
-                  { tag: 'Office', tagClass: 'bg-surface-container-high text-on-surface-variant', title: 'Innovation Hub', address: 'Level 4, Brahmaputra Towers,\nGS Road, Dispur,\nAssam - 781005, India' },
-                ].map(addr => (
-                  <div key={addr.title} className="bg-surface-container-low p-6 md:p-8 rounded-xl border border-outline-variant/30 hover:border-secondary transition-colors relative group">
-                    <div className="absolute top-4 md:top-6 right-4 md:right-6 flex space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="material-symbols-outlined text-on-surface-variant hover:text-primary text-lg">edit</button>
-                      <button className="material-symbols-outlined text-on-surface-variant hover:text-error text-lg">delete</button>
-                    </div>
-                    <span className={`inline-block ${addr.tagClass} px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-3 md:mb-4`}>{addr.tag}</span>
-                    <p className="font-headline font-bold text-base md:text-lg mb-2 text-on-surface">{addr.title}</p>
-                    <p className="text-on-surface-variant leading-relaxed font-medium text-sm whitespace-pre-line">{addr.address}</p>
+                {addresses.length === 0 ? (
+                  <div className="col-span-full text-center py-12">
+                    <span className="material-symbols-outlined text-6xl text-on-surface-variant opacity-30">location_off</span>
+                    <p className="text-on-surface-variant mt-4 font-headline">No addresses saved yet</p>
+                    <button
+                      onClick={handleAddAddress}
+                      className="mt-4 px-6 py-3 bg-secondary text-white rounded-lg font-headline font-bold hover:bg-secondary/90 transition-colors"
+                    >
+                      Add Your First Address
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  addresses.map(addr => (
+                    <div key={addr.id} className="bg-surface-container-low p-6 md:p-8 rounded-xl border border-outline-variant/30 hover:border-secondary transition-colors relative group">
+                      <div className="absolute top-4 md:top-6 right-4 md:right-6 flex space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleEditAddress(addr)}
+                          className="material-symbols-outlined text-on-surface-variant hover:text-primary text-lg"
+                        >
+                          edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAddress(addr.id)}
+                          className="material-symbols-outlined text-on-surface-variant hover:text-error text-lg"
+                        >
+                          delete
+                        </button>
+                      </div>
+                      {addr.is_default && (
+                        <span className="inline-block bg-secondary-container text-on-secondary-container px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest mb-3 md:mb-4">
+                          Default Shipping
+                        </span>
+                      )}
+                      <p className="font-headline font-bold text-base md:text-lg mb-2 text-on-surface">{addr.title}</p>
+                      <p className="text-on-surface-variant leading-relaxed font-medium text-sm">
+                        {addr.address_line1}
+                        {addr.address_line2 && <><br />{addr.address_line2}</>}
+                        <br />{addr.city}, {addr.state}
+                        <br />{addr.postal_code}, {addr.country}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
-            {/* Security & Preferences */}
             <div className="bg-primary text-on-primary p-8 md:p-12 rounded-2xl overflow-hidden relative">
               <div className="absolute bottom-0 right-0 w-48 md:w-64 h-48 md:h-64 bg-[#00643c] rounded-full translate-x-1/2 translate-y-1/2 opacity-20 blur-3xl" />
               <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
                 <div className="space-y-6 md:space-y-8">
                   <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight">Security &amp; Privacy</h2>
                   <div className="space-y-5 md:space-y-6">
-                    {[['Change Password', 'Last changed 4 months ago', null], ['Two-Factor Authentication', 'Enabled for extra protection', 'verified_user']].map(([title, desc, icon]) => (
-                      <div key={title} className="flex items-center justify-between group cursor-pointer border-b border-on-primary-container/20 pb-4">
-                        <div>
-                          <p className="font-headline font-bold text-base md:text-lg">{title}</p>
-                          <p className="text-on-primary-container text-xs md:text-sm">{desc}</p>
-                        </div>
-                        {icon ? <span className="material-symbols-outlined text-secondary-container" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
-                          : <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward_ios</span>}
+                    <button
+                      onClick={() => setShowPasswordModal(true)}
+                      className="w-full flex items-center justify-between group cursor-pointer border-b border-on-primary-container/20 pb-4 text-left"
+                    >
+                      <div>
+                        <p className="font-headline font-bold text-base md:text-lg">Change Password</p>
+                        <p className="text-on-primary-container text-xs md:text-sm">Update your account password</p>
                       </div>
-                    ))}
+                      <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward_ios</span>
+                    </button>
+                    <div className="flex items-center justify-between group cursor-pointer border-b border-on-primary-container/20 pb-4">
+                      <div>
+                        <p className="font-headline font-bold text-base md:text-lg">Two-Factor Authentication</p>
+                        <p className="text-on-primary-container text-xs md:text-sm">Enabled for extra protection</p>
+                      </div>
+                      <span className="material-symbols-outlined text-secondary-container" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-6 md:space-y-8">
                   <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight">Preferences</h2>
                   <div className="space-y-5 md:space-y-6">
-                    {[['Newsletter Subscription', 'Receive heritage recipes and news', newsletter, setNewsletter],
-                      ['SMS Notifications', 'Order updates and delivery tracking', sms, setSms]].map(([title, desc, val, set]) => (
-                      <div key={title} className="flex items-center justify-between cursor-pointer group" onClick={() => set(!val)}>
-                        <div>
-                          <p className="font-headline font-bold text-base md:text-lg">{title}</p>
-                          <p className="text-on-primary-container text-xs md:text-sm">{desc}</p>
-                        </div>
-                        <div className={`w-10 md:w-12 h-5 md:h-6 ${val ? 'bg-primary-container' : 'bg-on-primary-container/30'} rounded-full relative p-1 transition-colors`}>
-                          <div className={`w-3 md:w-4 h-3 md:h-4 bg-white rounded-full transition-all ${val ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'}`} />
-                        </div>
+                    <div className="flex items-center justify-between cursor-pointer group" onClick={() => setNewsletter(!newsletter)}>
+                      <div>
+                        <p className="font-headline font-bold text-base md:text-lg">Newsletter Subscription</p>
+                        <p className="text-on-primary-container text-xs md:text-sm">Receive heritage recipes and news</p>
                       </div>
-                    ))}
+                      <div className={`w-10 md:w-12 h-5 md:h-6 ${newsletter ? 'bg-primary-container' : 'bg-on-primary-container/30'} rounded-full relative p-1 transition-colors`}>
+                        <div className={`w-3 md:w-4 h-3 md:h-4 bg-white rounded-full transition-all ${newsletter ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'}`} />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between cursor-pointer group" onClick={() => setSms(!sms)}>
+                      <div>
+                        <p className="font-headline font-bold text-base md:text-lg">SMS Notifications</p>
+                        <p className="text-on-primary-container text-xs md:text-sm">Order updates and delivery tracking</p>
+                      </div>
+                      <div className={`w-10 md:w-12 h-5 md:h-6 ${sms ? 'bg-primary-container' : 'bg-on-primary-container/30'} rounded-full relative p-1 transition-colors`}>
+                        <div className={`w-3 md:w-4 h-3 md:h-4 bg-white rounded-full transition-all ${sms ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'}`} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -280,6 +390,21 @@ export default function Profile() {
           </section>
         </div>
       </div>
+
+      <AddressModal
+        isOpen={showAddressModal}
+        onClose={() => {
+          setShowAddressModal(false);
+          setEditingAddress(null);
+        }}
+        onSave={handleSaveAddress}
+        address={editingAddress}
+      />
+
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </main>
   );
 }
