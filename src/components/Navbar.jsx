@@ -1,0 +1,115 @@
+import { useState, useEffect } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+
+const navLinks = [
+  { to: '/', label: 'Home' },
+  { to: '/about', label: 'About Us' },
+  { to: '/products', label: 'Our Products' },
+  { to: '/traditions', label: 'Traditions' },
+  { to: '/recipes', label: 'Recipes' },
+  { to: '/gallery', label: 'Gallery' },
+  { to: '/contact', label: 'Contact Us' },
+];
+
+export default function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <header
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        scrolled ? 'bg-surface/90 backdrop-blur-xl shadow-sm' : 'bg-surface/80 backdrop-blur-md'
+      }`}
+    >
+      <nav className="flex justify-between items-center px-6 md:px-12 py-4 md:py-5 w-full max-w-screen-2xl mx-auto">
+        {/* Logo */}
+        <Link to="/" className="font-brand text-2xl md:text-3xl text-primary tracking-tighter hover:text-primary-container transition-colors">
+          Hatvoni
+        </Link>
+
+        {/* Desktop Nav */}
+        <div className="hidden md:flex items-center space-x-8">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                `font-headline tracking-tight text-sm transition-colors duration-200 ${
+                  isActive
+                    ? 'text-secondary border-b-2 border-secondary pb-1 font-semibold'
+                    : 'text-primary/70 hover:text-primary'
+                }`
+              }
+              end={link.to === '/'}
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center space-x-1">
+          <Link to="/wishlist" className="p-2 text-primary hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+            <span className="material-symbols-outlined text-xl">favorite</span>
+          </Link>
+          <Link to="/cart" className="relative p-2 text-primary hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+            <span className="material-symbols-outlined text-xl">shopping_cart</span>
+            <span className="absolute -top-0.5 -right-0.5 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">2</span>
+          </Link>
+          <Link to="/profile" className="p-2 text-primary hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+            <span className="material-symbols-outlined text-xl">person</span>
+          </Link>
+          {/* Mobile Menu Toggle */}
+          <button
+            className="md:hidden p-2 text-primary"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
+          >
+            <span className="material-symbols-outlined">{menuOpen ? 'close' : 'menu'}</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile Menu */}
+      {menuOpen && (
+        <div className="md:hidden bg-surface/95 backdrop-blur-xl border-t border-outline-variant px-6 py-4 space-y-4">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                `block py-2 font-headline tracking-tight text-base ${
+                  isActive ? 'text-secondary font-bold' : 'text-primary/70'
+                }`
+              }
+              onClick={() => setMenuOpen(false)}
+              end={link.to === '/'}
+            >
+              {link.label}
+            </NavLink>
+          ))}
+          <div className="flex gap-6 pt-4 border-t border-outline-variant/30">
+            <Link to="/wishlist" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
+              <span className="material-symbols-outlined text-lg">favorite</span> Wishlist
+            </Link>
+            <Link to="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
+              <span className="material-symbols-outlined text-lg">shopping_cart</span> Cart
+            </Link>
+            <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
+              <span className="material-symbols-outlined text-lg">person</span> Profile
+            </Link>
+            <Link to="/orders" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
+              <span className="material-symbols-outlined text-lg">package_2</span> Orders
+            </Link>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
