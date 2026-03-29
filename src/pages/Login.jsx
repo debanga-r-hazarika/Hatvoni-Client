@@ -18,7 +18,13 @@ export default function Login() {
     const { error: signInError } = await signIn(email, password);
 
     if (signInError) {
-      setError(signInError.message);
+      if (signInError.message.includes('Email not confirmed')) {
+        setError('Please verify your email address before signing in. Check your inbox for the confirmation link.');
+      } else if (signInError.message.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else {
+        setError(signInError.message);
+      }
       setLoading(false);
     } else {
       navigate('/');

@@ -77,7 +77,8 @@ export const AuthProvider = ({ children }) => {
       email,
       password,
       options: {
-        data: userData
+        data: userData,
+        emailRedirectTo: `${window.location.origin}/confirm-account`
       }
     });
     return { data, error };

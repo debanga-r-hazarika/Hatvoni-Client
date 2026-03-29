@@ -39,19 +39,28 @@ export default function Signup() {
       return;
     }
 
-    const { error: signUpError } = await signUp(
+    const { data, error: signUpError } = await signUp(
       formData.email,
       formData.password,
       { full_name: formData.fullName }
     );
 
     if (signUpError) {
-      setError(signUpError.message);
+      if (signUpError.message.includes('already registered') || signUpError.message.includes('User already registered')) {
+        setError('Sorry, you are already registered with this email address. Please sign in or reset your password if you forgot it.');
+      } else {
+        setError(signUpError.message);
+      }
       setLoading(false);
     } else {
       setSuccess(true);
       setLoading(false);
-      setTimeout(() => navigate('/confirm-account', { state: { email: formData.email } }), 1500);
+      setTimeout(() => navigate('/confirm-account', {
+        state: {
+          email: formData.email,
+          needsConfirmation: data?.user?.identities?.length === 0
+        }
+      }), 1500);
     }
   };
 
@@ -66,7 +75,24 @@ export default function Signup() {
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-red-600 mb-2">{error}</p>
+              {error.includes('already registered') && (
+                <div className="mt-3 pt-3 border-t border-red-100 flex gap-3">
+                  <Link
+                    to="/login"
+                    className="text-sm font-medium text-red-700 hover:text-red-900 underline"
+                  >
+                    Sign in instead
+                  </Link>
+                  <span className="text-red-300">|</span>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm font-medium text-red-700 hover:text-red-900 underline"
+                  >
+                    Reset password
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
