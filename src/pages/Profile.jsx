@@ -83,10 +83,13 @@ export default function Profile() {
     navigate('/');
   };
 
+  const isAdmin = profile?.is_admin === true;
+
   const sidebarLinks = [
     { label: 'Personal Details', href: '/profile', icon: 'person', active: true },
     { label: 'My Orders', href: '/orders', icon: 'package_2', active: false },
     { label: 'Wishlist', href: '/wishlist', icon: 'favorite', active: false },
+    ...(isAdmin ? [{ label: 'Admin Panel', href: '/admin', icon: 'admin_panel_settings', active: false, admin: true }] : []),
     { label: 'Log Out', onClick: handleLogout, icon: 'logout', active: false, danger: true },
   ];
 
@@ -136,7 +139,7 @@ export default function Profile() {
                   <Link key={link.label} to={link.href}
                     className={`flex items-center space-x-4 group ${link.danger ? 'opacity-40 hover:opacity-70' : link.label === 'Personal Details' ? '' : 'opacity-40 hover:opacity-100'} transition-opacity`}>
                     <span className={`w-8 h-[2px] ${link.label === 'Personal Details' ? 'bg-secondary' : 'bg-outline group-hover:bg-secondary'} transition-colors`} />
-                    <span className={`font-headline font-${link.label === 'Personal Details' ? 'extrabold' : 'bold'} text-xl ${link.label === 'Personal Details' ? 'text-primary' : 'text-on-surface'} tracking-tight`}>{link.label}</span>
+                    <span className={`font-headline font-${link.label === 'Personal Details' ? 'extrabold' : 'bold'} text-xl ${link.label === 'Personal Details' ? 'text-primary' : link.admin ? 'text-secondary' : 'text-on-surface'} tracking-tight`}>{link.label}</span>
                   </Link>
                 )
               ))}
