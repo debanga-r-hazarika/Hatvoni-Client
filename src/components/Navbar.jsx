@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const navLinks = [
   { to: '/', label: 'Home' },
@@ -15,6 +16,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -24,10 +26,45 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
+    } else {
+      setUserProfile(null);
+    }
+  }, [user]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        setUserProfile(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
     setMenuOpen(false);
+  };
+
+  const getUserDisplayName = () => {
+    if (userProfile?.full_name) {
+      return userProfile.full_name.split(' ')[0];
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
   };
 
   return (
@@ -74,15 +111,21 @@ export default function Navbar() {
 
           {user ? (
             <>
-              <Link to="/profile" className="p-2 text-primary hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+              <div className="hidden md:flex items-center space-x-3 ml-2">
+                <Link to="/profile" className="flex items-center space-x-2 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors">
+                  <span className="material-symbols-outlined text-xl text-primary">person</span>
+                  <span className="text-sm font-headline font-semibold text-primary">{getUserDisplayName()}</span>
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="px-4 py-2 text-sm font-headline font-semibold text-primary hover:bg-surface-container-low rounded-lg transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+              <Link to="/profile" className="md:hidden p-2 text-primary hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
                 <span className="material-symbols-outlined text-xl">person</span>
               </Link>
-              <button
-                onClick={handleSignOut}
-                className="hidden md:block ml-2 px-4 py-2 text-sm font-headline font-semibold text-primary hover:bg-surface-container-low rounded-lg transition-colors"
-              >
-                Logout
-              </button>
             </>
           ) : (
             <div className="hidden md:flex items-center space-x-2 ml-2">

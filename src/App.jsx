@@ -24,9 +24,10 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import ConfirmAccount from './pages/ConfirmAccount';
 
 // Pages that use a minimal transactional header (no shared Navbar/Footer)
-const TRANSACTIONAL = ['/checkout', '/login', '/signup', '/forgot-password', '/reset-password'];
+const TRANSACTIONAL = ['/checkout', '/login', '/signup', '/forgot-password', '/reset-password', '/confirm-account'];
 
 function Layout({ children, path }) {
   const isTransactional = TRANSACTIONAL.includes(path);
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/confirm-account" element={<ConfirmAccount />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

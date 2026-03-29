@@ -1,17 +1,106 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-
-const sidebarLinks = [
-  { label: 'Personal Details', href: '/profile', icon: 'person', active: true },
-  { label: 'My Orders', href: '/orders', icon: 'package_2', active: false },
-  { label: 'Wishlist', href: '#', icon: 'favorite', active: false },
-  { label: 'Log Out', href: '#', icon: 'logout', active: false, danger: true },
-];
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState('Personal Details');
   const [newsletter, setNewsletter] = useState(true);
   const [sms, setSms] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    phone: ''
+  });
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    fetchProfile();
+  }, [user, navigate]);
+
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setProfile(data);
+        setFormData({
+          full_name: data.full_name || '',
+          email: data.email || user.email || '',
+          phone: data.phone || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.full_name,
+          phone: formData.phone,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      alert('Profile updated successfully!');
+      fetchProfile();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile');
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  const sidebarLinks = [
+    { label: 'Personal Details', href: '/profile', icon: 'person', active: true },
+    { label: 'My Orders', href: '/orders', icon: 'package_2', active: false },
+    { label: 'Wishlist', href: '/wishlist', icon: 'favorite', active: false },
+    { label: 'Log Out', onClick: handleLogout, icon: 'logout', active: false, danger: true },
+  ];
+
+  if (loading) {
+    return (
+      <main className="pt-24 pb-20">
+        <div className="max-w-screen-xl mx-auto px-6 md:px-12 py-8 md:py-16">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <p className="text-lg text-slate-600">Loading profile...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="pt-24 pb-20">
@@ -37,17 +126,18 @@ export default function Profile() {
             {/* Desktop: sidebar nav */}
             <nav className="hidden lg:flex flex-col space-y-4">
               {sidebarLinks.map(link => (
-                link.href !== '#' ? (
+                link.onClick ? (
+                  <button key={link.label} onClick={link.onClick}
+                    className="flex items-center space-x-4 group opacity-40 hover:opacity-70 transition-opacity text-left">
+                    <span className="w-8 h-[2px] bg-outline group-hover:bg-secondary transition-colors" />
+                    <span className={`font-headline font-bold text-xl ${link.danger ? 'text-error' : 'text-on-surface'} tracking-tight`}>{link.label}</span>
+                  </button>
+                ) : (
                   <Link key={link.label} to={link.href}
                     className={`flex items-center space-x-4 group ${link.danger ? 'opacity-40 hover:opacity-70' : link.label === 'Personal Details' ? '' : 'opacity-40 hover:opacity-100'} transition-opacity`}>
                     <span className={`w-8 h-[2px] ${link.label === 'Personal Details' ? 'bg-secondary' : 'bg-outline group-hover:bg-secondary'} transition-colors`} />
                     <span className={`font-headline font-${link.label === 'Personal Details' ? 'extrabold' : 'bold'} text-xl ${link.label === 'Personal Details' ? 'text-primary' : 'text-on-surface'} tracking-tight`}>{link.label}</span>
                   </Link>
-                ) : (
-                  <button key={link.label} className="flex items-center space-x-4 group opacity-40 hover:opacity-70 transition-opacity text-left">
-                    <span className="w-8 h-[2px] bg-outline group-hover:bg-secondary transition-colors" />
-                    <span className={`font-headline font-bold text-xl ${link.danger ? 'text-error' : 'text-on-surface'} tracking-tight`}>{link.label}</span>
-                  </button>
                 )
               ))}
             </nav>
@@ -68,14 +158,43 @@ export default function Profile() {
                 <div className="bg-surface-container-low p-8 md:p-10 rounded-xl space-y-6 md:space-y-8 relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-10"><span className="material-symbols-outlined text-7xl md:text-8xl">ecg_heart</span></div>
                   <div className="space-y-5 md:space-y-6">
-                    {[['Full Name', 'Ananya Sharma', 'text'], ['Email Address', 'ananya.sharma@heritage.com', 'email'], ['Contact Number', '+91 98765 43210', 'tel']].map(([label, val, type]) => (
-                      <div key={label} className="border-b border-outline-variant pb-2">
-                        <label className="block text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-1">{label}</label>
-                        <input className="w-full bg-transparent border-none p-0 text-lg md:text-xl font-headline font-semibold focus:ring-0 text-on-surface outline-none" type={type} defaultValue={val} />
-                      </div>
-                    ))}
+                    <div className="border-b border-outline-variant pb-2">
+                      <label className="block text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-1">Full Name</label>
+                      <input
+                        className="w-full bg-transparent border-none p-0 text-lg md:text-xl font-headline font-semibold focus:ring-0 text-on-surface outline-none"
+                        type="text"
+                        name="full_name"
+                        value={formData.full_name}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="border-b border-outline-variant pb-2">
+                      <label className="block text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-1">Email Address</label>
+                      <input
+                        className="w-full bg-transparent border-none p-0 text-lg md:text-xl font-headline font-semibold focus:ring-0 text-on-surface outline-none"
+                        type="email"
+                        value={formData.email}
+                        disabled
+                      />
+                    </div>
+                    <div className="border-b border-outline-variant pb-2">
+                      <label className="block text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-1">Contact Number</label>
+                      <input
+                        className="w-full bg-transparent border-none p-0 text-lg md:text-xl font-headline font-semibold focus:ring-0 text-on-surface outline-none"
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        placeholder="+91 98765 43210"
+                      />
+                    </div>
                   </div>
-                  <button className="bg-primary text-on-primary px-6 md:px-8 py-3 md:py-4 rounded-xl font-headline font-bold text-sm tracking-wide hover:bg-primary-container transition-colors shadow-lg">Save Changes</button>
+                  <button
+                    onClick={handleSaveChanges}
+                    className="bg-primary text-on-primary px-6 md:px-8 py-3 md:py-4 rounded-xl font-headline font-bold text-sm tracking-wide hover:bg-primary-container transition-colors shadow-lg"
+                  >
+                    Save Changes
+                  </button>
                 </div>
                 {/* Profile portrait */}
                 <div className="relative rounded-xl overflow-hidden aspect-square md:aspect-auto min-h-[200px]">

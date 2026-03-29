@@ -51,7 +51,7 @@ export default function Signup() {
     } else {
       setSuccess(true);
       setLoading(false);
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate('/confirm-account', { state: { email: formData.email } }), 1500);
     }
   };
 
@@ -72,7 +72,7 @@ export default function Signup() {
 
           {success && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-600">Account created successfully! Redirecting...</p>
+              <p className="text-sm text-green-600">Account created successfully! Setting up your profile...</p>
             </div>
           )}
 
