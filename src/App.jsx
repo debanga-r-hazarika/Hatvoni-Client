@@ -25,6 +25,7 @@ import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ConfirmAccount from './pages/ConfirmAccount';
+import Admin from './pages/Admin';
 
 // Pages that use a minimal transactional header (no shared Navbar/Footer)
 const TRANSACTIONAL = ['/checkout', '/login', '/signup', '/forgot-password', '/reset-password', '/confirm-account'];
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/profile" element={<Layout path="/profile"><Profile /></Layout>} />
           <Route path="/orders" element={<Layout path="/orders"><Orders /></Layout>} />
+          <Route path="/admin" element={<Layout path="/admin"><Admin /></Layout>} />
           <Route path="/order/:id" element={<Layout path="/order/:id"><OrderDetail /></Layout>} />
           <Route path="/wishlist" element={<Layout path="/wishlist"><Wishlist /></Layout>} />
           <Route path="/privacy-policy" element={<Layout path="/privacy-policy"><PrivacyPolicy /></Layout>} />

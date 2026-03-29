@@ -13,17 +13,43 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const fetchProfile = async (userId) => {
+    if (!userId) {
+      setProfile(null);
+      setIsAdmin(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (!error && data) {
+      setProfile(data);
+      setIsAdmin(data.is_admin || false);
+    } else {
+      setProfile(null);
+      setIsAdmin(false);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      fetchProfile(session?.user?.id);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       (async () => {
         setUser(session?.user ?? null);
+        await fetchProfile(session?.user?.id);
         setLoading(false);
       })();
     });
@@ -71,12 +97,15 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    profile,
+    isAdmin,
     loading,
     signUp,
     signIn,
     signOut,
     resetPassword,
-    updatePassword
+    updatePassword,
+    refreshProfile: () => fetchProfile(user?.id)
   };
 
   return (

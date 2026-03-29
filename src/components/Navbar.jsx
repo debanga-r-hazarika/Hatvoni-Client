@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 
 const navLinks = [
   { to: '/', label: 'Home' },
@@ -16,8 +15,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState(null);
-  const { user, signOut } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,31 +24,6 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      fetchUserProfile();
-    } else {
-      setUserProfile(null);
-    }
-  }, [user]);
-
-  const fetchUserProfile = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('full_name, email')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data) {
-        setUserProfile(data);
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
@@ -58,8 +31,8 @@ export default function Navbar() {
   };
 
   const getUserDisplayName = () => {
-    if (userProfile?.full_name) {
-      return userProfile.full_name.split(' ')[0];
+    if (profile?.full_name) {
+      return profile.full_name.split(' ')[0];
     }
     if (user?.email) {
       return user.email.split('@')[0];
@@ -112,6 +85,11 @@ export default function Navbar() {
           {user ? (
             <>
               <div className="hidden md:flex items-center space-x-3 ml-2">
+                {isAdmin && (
+                  <Link to="/admin" className="px-3 py-2 text-sm font-headline font-semibold bg-amber-500 text-white hover:bg-amber-600 rounded-lg transition-colors">
+                    Admin
+                  </Link>
+                )}
                 <Link to="/profile" className="flex items-center space-x-2 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-colors">
                   <span className="material-symbols-outlined text-xl text-primary">person</span>
                   <span className="text-sm font-headline font-semibold text-primary">{getUserDisplayName()}</span>
@@ -182,6 +160,11 @@ export default function Navbar() {
             </Link>
             {user ? (
               <>
+                {isAdmin && (
+                  <Link to="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-lg font-headline font-bold text-sm">
+                    <span className="material-symbols-outlined text-lg">admin_panel_settings</span> Admin Dashboard
+                  </Link>
+                )}
                 <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-primary font-headline font-bold text-sm">
                   <span className="material-symbols-outlined text-lg">person</span> Profile
                 </Link>
