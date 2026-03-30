@@ -6,6 +6,7 @@ import { addressService } from '../services/addressService';
 import { avatarService } from '../services/avatarService';
 import AddressModal from '../components/AddressModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import ProfileMobileView from '../components/ProfileMobileView';
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState('Personal Details');
@@ -242,7 +243,24 @@ export default function Profile() {
 
   return (
     <main className="pt-24 pb-20">
-      <div className="max-w-screen-xl mx-auto px-6 md:px-12 py-8 md:py-16">
+      <ProfileMobileView
+        profile={profile}
+        formData={formData}
+        addresses={addresses}
+        avatarUploading={avatarUploading}
+        fileInputRef={fileInputRef}
+        onAvatarUpload={handleAvatarUpload}
+        onInputChange={handleInputChange}
+        onSave={handleSaveChanges}
+        onAddAddress={handleAddAddress}
+        onEditAddress={handleEditAddress}
+        onDeleteAddress={handleDeleteAddress}
+        onPasswordModal={() => setShowPasswordModal(true)}
+        onLogout={handleLogout}
+        getFullName={getFullName}
+      />
+
+      <div className="hidden lg:block max-w-screen-xl mx-auto px-6 md:px-12 py-8 md:py-16">
         <div className="mb-10 md:mb-16">
           <h1 className="font-brand text-5xl md:text-8xl text-primary leading-none tracking-tighter uppercase">My Profile</h1>
           <div className="w-24 md:w-32 h-1.5 md:h-2 bg-secondary mt-4 md:mt-6" />
@@ -250,14 +268,6 @@ export default function Profile() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 md:gap-16">
           <aside className="space-y-8 md:space-y-12">
-            <div className="flex gap-2 flex-wrap lg:hidden">
-              {sidebarLinks.filter(l => !l.danger).map(l => (
-                <button key={l.label} onClick={() => setActiveTab(l.label)}
-                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeTab === l.label ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}>
-                  {l.label}
-                </button>
-              ))}
-            </div>
             <nav className="hidden lg:flex flex-col space-y-4">
               {sidebarLinks.map(link => (
                 link.onClick ? (
