@@ -57,6 +57,16 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [handleScroll]);
 
+  const closeMenu = useCallback(() => {
+    if (menuOpen) {
+      setIsClosing(true);
+      setTimeout(() => {
+        setMenuOpen(false);
+        setIsClosing(false);
+      }, 280);
+    }
+  }, [menuOpen]);
+
   useEffect(() => {
     if (menuOpen) {
       document.body.style.overflow = 'hidden';
@@ -68,19 +78,17 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
+  const prevPathRef = useRef(location.pathname);
   useEffect(() => {
-    closeMenu();
-  }, [location.pathname]);
-
-  const closeMenu = () => {
-    if (menuOpen) {
+    if (prevPathRef.current !== location.pathname && menuOpen) {
       setIsClosing(true);
       setTimeout(() => {
         setMenuOpen(false);
         setIsClosing(false);
       }, 280);
     }
-  };
+    prevPathRef.current = location.pathname;
+  }, [location.pathname, menuOpen]);
 
   const toggleMenu = () => {
     if (menuOpen) {

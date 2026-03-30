@@ -1,21 +1,97 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+
 export default function Products() {
-  const products = [
-    {
-      id: 'kola', name: 'Kola Khar', price: '₹450', badge: 'MOST TRADITIONAL',
-      desc: "Derived from the ashes of sun-dried 'Bhim Kol' banana peels. Cornerstone of Assamese digestive wellness.",
-      img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCppttAYi65wcwJ48dmuDXQoJ7Ns1XFDJpyn2pm51wBMvtZJZyA81TLcPRYDVNUvkX137aFh6bCsmL242k4po8GiovqSx4UDSQMNLbqjyLJd9JtY5WeB4S5zxU-6kSdxO8EeyNBMxPqG3T2EwNqikZ_5YnBHmo-NhjYCVYK7cdS2B7XORkqlT3czbzvqV9Ne5GxzD8R62EmrKIMmnSa_VSmw8kg2iNBvTak58uMCsQFev55cfKbZOtTCdMPcMtrDF4VsbPmePH6ek_U',
-    },
-    {
-      id: 'matimah', name: 'Matimah Khar', price: '₹380',
-      desc: 'A specialized alkaline extract crafted from indigenous black gram stalks. Cooling properties and unique earthy aroma.',
-      img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCYCsraiJT5J2F9GETqOEeIbiqFI43mVc_vVEvmza_jJVAOgeFVDeAKX32ieTISYVnlydvoxTbctwu4ZszgCP-iq3xXgaZkejsygNPO7QatRmqrs7gP1ayRr3KeTH66j86KPerCnnCRU5PJfoQtQxgcBzkuczz_DznmPxwr7MRBC8VVarGBHHLvzESjYCijsO5JH-2xU66oxdkbxqFxN2R23qQuNrICawKXMFIk4tNTFspyY1iNyLf3pI38ngl7C3km94B0r7YG3fqQ',
-    },
-    {
-      id: 'khardwi', name: 'Khardwi Khar', price: '₹320',
-      desc: "The 'water of Khar'. A refined, gentle preparation ideal for beginners. Crystal clear and potent.",
-      img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBFiCzYccrIynr6YX7WiUCsoKJI0iCByi8IELZQdj0-lptJadq8DGQS08QxE0wgxdkqWMYZj4rn5enCA_pwiRLkYTWC2_h0yIYa9CK3V8q8TX6xJSw47yY_KqrryyjY7XZibai3NBdhtIqYsB1G_VXksUoW91MQ8Cujn53tcrYLa0j9JJj5oXDj3zvNAeVXMRNtYh6NI9rHESTiK9YQBNEmGiKMbBK1xLDqzPNZ3iVuUQKj0stma6olNzYgS0w13cQhCABTY_rQ1_PV',
-    },
-  ];
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [wishlistIds, setWishlistIds] = useState(new Set());
+  const { user } = useAuth();
+
+  useEffect(() => {
+    fetchProducts();
+    if (user) {
+      fetchWishlist();
+    }
+  }, [user]);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchWishlist = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('wishlists')
+        .select('product_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setWishlistIds(new Set(data?.map(w => w.product_id) || []));
+    } catch (error) {
+      console.error('Error fetching wishlist:', error);
+    }
+  };
+
+  const toggleWishlist = async (productId) => {
+    if (!user) {
+      alert('Please login to add items to wishlist');
+      return;
+    }
+
+    const isInWishlist = wishlistIds.has(productId);
+
+    try {
+      if (isInWishlist) {
+        const { error } = await supabase
+          .from('wishlists')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('product_id', productId);
+        if (error) throw error;
+        setWishlistIds(prev => {
+          const next = new Set(prev);
+          next.delete(productId);
+          return next;
+        });
+      } else {
+        const { error } = await supabase
+          .from('wishlists')
+          .insert({ user_id: user.id, product_id: productId });
+        if (error) throw error;
+        setWishlistIds(prev => new Set([...prev, productId]));
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="pt-32 pb-24 px-6 md:px-12 max-w-screen-2xl mx-auto min-h-screen">
+        <div className="flex items-center justify-center py-32">
+          <span className="material-symbols-outlined animate-spin text-secondary text-4xl">progress_activity</span>
+        </div>
+      </main>
+    );
+  }
+
+  const featuredProduct = products[0];
+  const otherProducts = products.slice(1);
 
   return (
     <main className="pt-32 pb-24 px-6 md:px-12 max-w-screen-2xl mx-auto">
@@ -28,64 +104,116 @@ export default function Products() {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Featured - Kola Khar */}
-        <div className="md:col-span-8 group">
-          <div className="relative bg-surface-container-low rounded-xl overflow-hidden min-h-[500px] flex flex-col md:flex-row hover:shadow-xl transition-all duration-500">
-            <div className="w-full md:w-1/2 relative overflow-hidden min-h-[300px]">
-              <img src={products[0].img} alt={products[0].name} className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-            </div>
-            <div className="w-full md:w-1/2 p-10 flex flex-col justify-between">
-              <div>
-                <span className="inline-block px-4 py-1 bg-secondary-container text-on-secondary-container font-medium text-xs rounded-full mb-6">{products[0].badge}</span>
-                <h2 className="font-brand text-4xl text-primary mb-4">{products[0].name}</h2>
-                <p className="text-on-surface-variant leading-relaxed mb-8">{products[0].desc}</p>
-                <div className="flex flex-wrap gap-4 mb-10">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary"><span className="material-symbols-outlined text-lg">eco</span>100% Organic</div>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary"><span className="material-symbols-outlined text-lg">science</span>High pH Balance</div>
+      {products.length === 0 ? (
+        <div className="text-center py-20">
+          <span className="material-symbols-outlined text-6xl text-on-surface-variant/30">inventory_2</span>
+          <p className="mt-4 text-on-surface-variant font-headline text-lg">No products available</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          {featuredProduct && (
+            <div className="md:col-span-8 group">
+              <div className="relative bg-surface-container-low rounded-xl overflow-hidden min-h-[500px] flex flex-col md:flex-row hover:shadow-xl transition-all duration-500">
+                <div className="w-full md:w-1/2 relative overflow-hidden min-h-[300px]">
+                  <img
+                    src={featuredProduct.image_url}
+                    alt={featuredProduct.name}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                  <button
+                    onClick={() => toggleWishlist(featuredProduct.id)}
+                    className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                  >
+                    <span
+                      className={`material-symbols-outlined ${wishlistIds.has(featuredProduct.id) ? 'text-red-500' : 'text-on-surface-variant'}`}
+                      style={wishlistIds.has(featuredProduct.id) ? { fontVariationSettings: "'FILL' 1" } : {}}
+                    >
+                      favorite
+                    </span>
+                  </button>
+                </div>
+                <div className="w-full md:w-1/2 p-10 flex flex-col justify-between">
+                  <div>
+                    <span className="inline-block px-4 py-1 bg-secondary-container text-on-secondary-container font-medium text-xs rounded-full mb-6">MOST TRADITIONAL</span>
+                    <h2 className="font-brand text-4xl text-primary mb-4">{featuredProduct.name}</h2>
+                    <p className="text-on-surface-variant leading-relaxed mb-8">{featuredProduct.description}</p>
+                    <div className="flex flex-wrap gap-4 mb-10">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                        <span className="material-symbols-outlined text-lg">eco</span>100% Organic
+                      </div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                        <span className="material-symbols-outlined text-lg">science</span>High pH Balance
+                      </div>
+                    </div>
+                  </div>
+                  <Link to={`/products/${featuredProduct.id}`}>
+                    <button className="w-full py-4 bg-primary-container text-on-primary-container rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-primary hover:text-white transition-all active:scale-[0.98]">
+                      <span className="material-symbols-outlined">add_shopping_cart</span>
+                      Add to Cart - ₹{featuredProduct.price}
+                    </button>
+                  </Link>
                 </div>
               </div>
-              <button className="w-full py-4 bg-primary-container text-on-primary-container rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-primary hover:text-white transition-all active:scale-[0.98]">
-                <span className="material-symbols-outlined">add_shopping_cart</span>Add to Cart — {products[0].price}
-              </button>
+            </div>
+          )}
+
+          {otherProducts.map((product) => (
+            <div key={product.id} className="md:col-span-4 group">
+              <div className="bg-surface-container-low rounded-xl overflow-hidden h-full flex flex-col hover:shadow-xl transition-all duration-500">
+                <div className="h-64 relative overflow-hidden">
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                  <button
+                    onClick={() => toggleWishlist(product.id)}
+                    className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                  >
+                    <span
+                      className={`material-symbols-outlined ${wishlistIds.has(product.id) ? 'text-red-500' : 'text-on-surface-variant'}`}
+                      style={wishlistIds.has(product.id) ? { fontVariationSettings: "'FILL' 1" } : {}}
+                    >
+                      favorite
+                    </span>
+                  </button>
+                </div>
+                <div className="p-8 flex-grow flex flex-col justify-between">
+                  <div>
+                    <h2 className="font-brand text-2xl text-primary mb-3">{product.name}</h2>
+                    <p className="text-on-surface-variant text-sm leading-relaxed mb-6">{product.description}</p>
+                  </div>
+                  <Link to={`/products/${product.id}`}>
+                    <button className="w-full py-3 border-2 border-primary-container text-primary-container rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-primary-container hover:text-on-primary-container transition-all active:scale-[0.98]">
+                      <span className="material-symbols-outlined">shopping_bag</span>
+                      Add to Cart - ₹{product.price}
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <div className="md:col-span-8">
+            <div className="bg-primary-container text-on-primary-container rounded-xl p-10 flex items-center relative overflow-hidden min-h-[300px]">
+              <div className="relative z-10 max-w-lg">
+                <h3 className="font-brand text-3xl mb-4">The Science of Khar</h3>
+                <p className="text-on-primary-container/80 mb-6 leading-relaxed">
+                  Traditional Khar is more than an ingredient; it's a medicinal heritage. Naturally high in pH, it aids protein digestion and maintains metabolic equilibrium.
+                </p>
+                <Link to="/traditions" className="inline-flex items-center gap-2 font-bold hover:underline">
+                  Learn about our process <span className="material-symbols-outlined">arrow_forward</span>
+                </Link>
+              </div>
+              <div className="absolute right-0 top-0 h-full w-1/3 opacity-20 pointer-events-none">
+                <svg className="h-full w-full fill-current" viewBox="0 0 100 100">
+                  <path d="M0,0 L100,0 L100,100 Z M50,50 L0,100 L100,100 Z" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Matimah + Khardwi */}
-        {products.slice(1).map((p) => (
-          <div key={p.id} className="md:col-span-4 group">
-            <div className="bg-surface-container-low rounded-xl overflow-hidden h-full flex flex-col hover:shadow-xl transition-all duration-500">
-              <div className="h-64 relative overflow-hidden">
-                <img src={p.img} alt={p.name} className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-              </div>
-              <div className="p-8 flex-grow flex flex-col justify-between">
-                <div>
-                  <h2 className="font-brand text-2xl text-primary mb-3">{p.name}</h2>
-                  <p className="text-on-surface-variant text-sm leading-relaxed mb-6">{p.desc}</p>
-                </div>
-                <button className="w-full py-3 border-2 border-primary-container text-primary-container rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-primary-container hover:text-on-primary-container transition-all active:scale-[0.98]">
-                  <span className="material-symbols-outlined">shopping_bag</span>Add to Cart — {p.price}
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Promo */}
-        <div className="md:col-span-8">
-          <div className="bg-primary-container text-on-primary-container rounded-xl p-10 flex items-center relative overflow-hidden min-h-[300px]">
-            <div className="relative z-10 max-w-lg">
-              <h3 className="font-brand text-3xl mb-4">The Science of Khar</h3>
-              <p className="text-on-primary-container/80 mb-6 leading-relaxed">Traditional Khar is more than an ingredient; it's a medicinal heritage. Naturally high in pH, it aids protein digestion and maintains metabolic equilibrium.</p>
-              <a href="#" className="inline-flex items-center gap-2 font-bold hover:underline">Learn about our process <span className="material-symbols-outlined">arrow_forward</span></a>
-            </div>
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-20 pointer-events-none">
-              <svg className="h-full w-full fill-current" viewBox="0 0 100 100"><path d="M0,0 L100,0 L100,100 Z M50,50 L0,100 L100,100 Z" /></svg>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </main>
   );
 }

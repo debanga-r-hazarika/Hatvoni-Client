@@ -80,7 +80,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
         setSuccess(false);
         onClose();
       }, 2000);
-    } catch (error) {
+    } catch {
       setErrors({ general: 'An unexpected error occurred' });
     } finally {
       setLoading(false);
