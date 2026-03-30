@@ -62,26 +62,52 @@ export const AuthProvider = ({ children }) => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
+      console.log('Auth state change:', event, session?.user?.id);
+
+      if (session?.user) {
+        const isLinking = localStorage.getItem('linking_google') === 'true';
         const identities = session.user.identities || [];
         const hasEmailProvider = identities.some(identity => identity.provider === 'email');
         const hasGoogleProvider = identities.some(identity => identity.provider === 'google');
-        const isLinking = localStorage.getItem('linking_google') === 'true';
-
-        if (hasEmailProvider && hasGoogleProvider && identities.length > 1 && !isLinking) {
-          await supabase.auth.signOut();
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-
-          localStorage.setItem('authError', 'An account with this email already exists with email/password. Please sign in using your email and password, or use a different Google account.');
-          window.location.href = '/login';
-          return;
-        }
 
         if (isLinking) {
+          console.log('Linking detected, updating database...');
           localStorage.removeItem('linking_google');
-          localStorage.setItem('link_success', 'Google account linked successfully!');
+
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ google_linked: true })
+            .eq('id', session.user.id);
+
+          if (updateError) {
+            console.error('Failed to update google_linked:', updateError);
+          } else {
+            console.log('Successfully set google_linked to true');
+            localStorage.setItem('link_success', 'Google account linked successfully!');
+          }
+        } else if (event === 'SIGNED_IN' && hasEmailProvider && hasGoogleProvider && identities.length > 1) {
+          console.log('Checking if Google account is linked...');
+          const { data: profileData, error: fetchError } = await supabase
+            .from('profiles')
+            .select('google_linked')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          console.log('Profile data:', profileData, 'Error:', fetchError);
+
+          if (!profileData?.google_linked) {
+            console.log('Google not linked, blocking sign-in');
+            await supabase.auth.signOut();
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+
+            localStorage.setItem('authError', 'An account with this email already exists with email/password. Please sign in using your email and password, then link your Google account from your profile settings.');
+            window.location.href = '/login';
+            return;
+          }
+
+          console.log('Google is linked, allowing sign-in');
         }
       }
 
