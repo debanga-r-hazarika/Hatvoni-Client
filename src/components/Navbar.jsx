@@ -199,7 +199,11 @@ export default function Navbar() {
                     to="/profile"
                     className="flex items-center space-x-2 px-3 py-2 hover:bg-surface-container-low rounded-lg transition-all duration-300 group"
                   >
-                    <span className="material-symbols-outlined text-xl text-primary transition-transform duration-300 group-hover:scale-110">person</span>
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover ring-2 ring-primary/20 transition-transform duration-300 group-hover:scale-110" />
+                    ) : (
+                      <span className="material-symbols-outlined text-xl text-primary transition-transform duration-300 group-hover:scale-110">person</span>
+                    )}
                     <span className="text-sm font-headline font-semibold text-primary">{getUserDisplayName()}</span>
                   </Link>
                   <button
@@ -213,7 +217,11 @@ export default function Navbar() {
                   to="/profile"
                   className="md:hidden p-2.5 text-primary hover:bg-surface-container-low rounded-full transition-all duration-300 hover:scale-110 active:scale-95"
                 >
-                  <span className="material-symbols-outlined text-xl">person</span>
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover ring-2 ring-primary/20" />
+                  ) : (
+                    <span className="material-symbols-outlined text-xl">person</span>
+                  )}
                 </Link>
               </>
             ) : (
@@ -367,7 +375,11 @@ export default function Navbar() {
                           opacity: isClosing ? 1 : 0,
                         }}
                       >
-                        <span className="material-symbols-outlined text-lg">person</span>
+                        {profile?.avatar_url ? (
+                          <img src={profile.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover ring-2 ring-primary/20" />
+                        ) : (
+                          <span className="material-symbols-outlined text-lg">person</span>
+                        )}
                         Profile
                       </Link>
                       <Link

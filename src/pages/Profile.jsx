@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { addressService } from '../services/addressService';
+import { avatarService } from '../services/avatarService';
 import AddressModal from '../components/AddressModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 
@@ -16,13 +17,15 @@ export default function Profile() {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     email: '',
     phone: ''
   });
-  const { user, signOut } = useAuth();
+  const { user, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -166,6 +169,50 @@ export default function Profile() {
     }
   };
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a JPG, PNG, or WebP image');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB');
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const avatarUrl = await avatarService.uploadAvatar(user.id, file);
+      setProfile(prev => ({ ...prev, avatar_url: avatarUrl }));
+      await refreshProfile();
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      alert('Failed to upload photo');
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!confirm('Remove your profile photo?')) return;
+    setAvatarUploading(true);
+    try {
+      await avatarService.removeAvatar(user.id);
+      setProfile(prev => ({ ...prev, avatar_url: null }));
+      await refreshProfile();
+    } catch (error) {
+      console.error('Error removing avatar:', error);
+      alert('Failed to remove photo');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const isAdmin = profile?.is_admin === true;
 
   const sidebarLinks = [
@@ -292,13 +339,49 @@ export default function Profile() {
                     Save Changes
                   </button>
                 </div>
-                <div className="relative rounded-xl overflow-hidden aspect-square md:aspect-auto min-h-[200px]">
-                  <img className="w-full h-full object-cover grayscale-[30%] brightness-90" alt="Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOFE6PMZ2XT8noFc0xQkFdg45aKtiFGJ0FWy3Db-AyVzj5rYcYfhkqx-qmOAN6jIt1SuDmWIZMxTuDDaYxaZtzK_oA3OBh4alCStH6r4d9a7PpzMFGSG6RP7Cvv6mujTD5bF6PZH34FMlFc9Nj8ov-jlP0A2HVyRdHUV_OjFV0rEe92lRwo28rzroDEg1zr378ooZetc3QxI6gj12tU2LhpYDCuAgYqxW86YpZngfEOS43zc62uEFEaaF70-a8iuAMHtzf795jVEcN" />
+                <div className="relative rounded-xl overflow-hidden aspect-square md:aspect-auto min-h-[200px] bg-surface-container flex items-center justify-center">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                  {profile?.avatar_url ? (
+                    <img
+                      className="w-full h-full object-cover"
+                      alt="Profile"
+                      src={profile.avatar_url}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-on-surface-variant/40">
+                      <span className="material-symbols-outlined text-8xl">account_circle</span>
+                      <p className="font-headline text-sm mt-2">No photo yet</p>
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex items-end p-6 md:p-8">
-                    <button className="flex items-center space-x-2 text-white/90 hover:text-white transition-colors">
-                      <span className="material-symbols-outlined">photo_camera</span>
-                      <span className="font-headline font-bold uppercase text-xs tracking-widest">Update Portrait</span>
-                    </button>
+                    <div className="flex items-center space-x-4">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={avatarUploading}
+                        className="flex items-center space-x-2 text-white/90 hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined">{avatarUploading ? 'progress_activity' : 'photo_camera'}</span>
+                        <span className="font-headline font-bold uppercase text-xs tracking-widest">
+                          {avatarUploading ? 'Uploading...' : profile?.avatar_url ? 'Change Photo' : 'Upload Photo'}
+                        </span>
+                      </button>
+                      {profile?.avatar_url && !avatarUploading && (
+                        <button
+                          onClick={handleRemoveAvatar}
+                          className="flex items-center space-x-1 text-white/60 hover:text-white/90 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                          <span className="font-headline font-bold uppercase text-[10px] tracking-widest">Remove</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

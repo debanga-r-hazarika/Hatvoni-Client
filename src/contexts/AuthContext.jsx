@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId) => {
+  const fetchProfile = async (userId, sessionUser) => {
     if (!userId) {
       setProfile(null);
       setIsAdmin(false);
@@ -39,11 +39,22 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (data) {
+        if (!data.avatar_url && sessionUser?.user_metadata?.avatar_url) {
+          const { data: updated } = await supabase
+            .from('profiles')
+            .update({ avatar_url: sessionUser.user_metadata.avatar_url, updated_at: new Date().toISOString() })
+            .eq('id', userId)
+            .select()
+            .maybeSingle();
+          if (updated) {
+            setProfile(updated);
+            setIsAdmin(updated.is_admin === true);
+            return;
+          }
+        }
         setProfile(data);
         setIsAdmin(data.is_admin === true);
-        console.log('Profile loaded:', { email: data.email, isAdmin: data.is_admin });
       } else {
-        console.warn('No profile found for user:', userId);
         setProfile(null);
         setIsAdmin(false);
       }
@@ -57,14 +68,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
-      await fetchProfile(session?.user?.id);
+      await fetchProfile(session?.user?.id, session?.user);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       (async () => {
         setUser(session?.user ?? null);
-        await fetchProfile(session?.user?.id);
+        await fetchProfile(session?.user?.id, session?.user);
         setLoading(false);
       })();
     });
@@ -132,7 +143,7 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     updatePassword,
     signInWithGoogle,
-    refreshProfile: () => fetchProfile(user?.id)
+    refreshProfile: () => fetchProfile(user?.id, user)
   };
 
   return (
