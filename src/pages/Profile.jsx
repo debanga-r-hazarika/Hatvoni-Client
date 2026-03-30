@@ -22,10 +22,7 @@ export default function Profile() {
     email: '',
     phone: ''
   });
-  const [authProviders, setAuthProviders] = useState([]);
-  const [linkingGoogle, setLinkingGoogle] = useState(false);
-  const [linkSuccess, setLinkSuccess] = useState('');
-  const { user, signOut, linkGoogleAccount, getAuthProviders } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,16 +32,6 @@ export default function Profile() {
     }
     fetchProfile();
     fetchAddresses();
-
-    const providers = getAuthProviders();
-    setAuthProviders(providers);
-
-    const successMsg = localStorage.getItem('link_success');
-    if (successMsg) {
-      setLinkSuccess(successMsg);
-      localStorage.removeItem('link_success');
-      setTimeout(() => setLinkSuccess(''), 5000);
-    }
   }, [user, navigate]);
 
   const fetchProfile = async () => {
@@ -176,26 +163,6 @@ export default function Profile() {
     } catch (error) {
       console.error('Error deleting address:', error);
       alert('Failed to delete address');
-    }
-  };
-
-  const handleLinkGoogle = async () => {
-    if (!confirm('Are you sure you want to link your Google account? This action cannot be undone.')) return;
-
-    try {
-      setLinkingGoogle(true);
-      localStorage.setItem('linking_google', 'true');
-      const { error } = await linkGoogleAccount();
-      if (error) {
-        localStorage.removeItem('linking_google');
-        setLinkingGoogle(false);
-        alert('Failed to link Google account: ' + error.message);
-      }
-    } catch (error) {
-      localStorage.removeItem('linking_google');
-      setLinkingGoogle(false);
-      console.error('Error linking Google:', error);
-      alert('Failed to link Google account');
     }
   };
 
@@ -395,64 +362,22 @@ export default function Profile() {
               </div>
             </div>
 
-            {linkSuccess && (
-              <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-600 font-medium">{linkSuccess}</p>
-              </div>
-            )}
-
             <div className="bg-primary text-on-primary p-8 md:p-12 rounded-2xl overflow-hidden relative">
               <div className="absolute bottom-0 right-0 w-48 md:w-64 h-48 md:h-64 bg-[#00643c] rounded-full translate-x-1/2 translate-y-1/2 opacity-20 blur-3xl" />
               <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
                 <div className="space-y-6 md:space-y-8">
                   <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight">Security &amp; Privacy</h2>
                   <div className="space-y-5 md:space-y-6">
-                    {authProviders.includes('email') && (
-                      <button
-                        onClick={() => setShowPasswordModal(true)}
-                        className="w-full flex items-center justify-between group cursor-pointer border-b border-on-primary-container/20 pb-4 text-left"
-                      >
-                        <div>
-                          <p className="font-headline font-bold text-base md:text-lg">Change Password</p>
-                          <p className="text-on-primary-container text-xs md:text-sm">Update your account password</p>
-                        </div>
-                        <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward_ios</span>
-                      </button>
-                    )}
-                    <div className="flex items-center justify-between border-b border-on-primary-container/20 pb-4">
+                    <button
+                      onClick={() => setShowPasswordModal(true)}
+                      className="w-full flex items-center justify-between group cursor-pointer border-b border-on-primary-container/20 pb-4 text-left"
+                    >
                       <div>
-                        <p className="font-headline font-bold text-base md:text-lg">Connected Accounts</p>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {authProviders.includes('email') && (
-                            <span className="inline-flex items-center gap-1 bg-on-primary/10 px-3 py-1 rounded-full text-xs font-bold">
-                              <span className="material-symbols-outlined text-sm">email</span>
-                              Email/Password
-                            </span>
-                          )}
-                          {authProviders.includes('google') && (
-                            <span className="inline-flex items-center gap-1 bg-on-primary/10 px-3 py-1 rounded-full text-xs font-bold">
-                              <span className="material-symbols-outlined text-sm">verified</span>
-                              Google
-                            </span>
-                          )}
-                        </div>
+                        <p className="font-headline font-bold text-base md:text-lg">Change Password</p>
+                        <p className="text-on-primary-container text-xs md:text-sm">Update your account password</p>
                       </div>
-                    </div>
-                    {authProviders.includes('email') && !authProviders.includes('google') && (
-                      <button
-                        onClick={handleLinkGoogle}
-                        disabled={linkingGoogle}
-                        className="w-full flex items-center justify-between group cursor-pointer border-b border-on-primary-container/20 pb-4 text-left hover:border-secondary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <div>
-                          <p className="font-headline font-bold text-base md:text-lg">Link Google Account</p>
-                          <p className="text-on-primary-container text-xs md:text-sm">
-                            {linkingGoogle ? 'Linking in progress...' : 'Sign in with Google in the future (permanent)'}
-                          </p>
-                        </div>
-                        <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">link</span>
-                      </button>
-                    )}
+                      <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward_ios</span>
+                    </button>
                     <div className="flex items-center justify-between group cursor-pointer border-b border-on-primary-container/20 pb-4">
                       <div>
                         <p className="font-headline font-bold text-base md:text-lg">Two-Factor Authentication</p>
