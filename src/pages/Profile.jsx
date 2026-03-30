@@ -36,25 +36,37 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     try {
+      console.log('Fetching profile for user:', user.id);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
 
-      if (error) throw error;
+      console.log('Profile fetch result:', { data, error });
+
+      if (error) {
+        console.error('Profile fetch error:', error);
+        throw error;
+      }
 
       if (data) {
+        console.log('Setting profile data:', data);
         setProfile(data);
-        setFormData({
+        const newFormData = {
           first_name: data.first_name || '',
           last_name: data.last_name || '',
           email: data.email || user.email || '',
           phone: data.phone || ''
-        });
+        };
+        console.log('Setting form data:', newFormData);
+        setFormData(newFormData);
+      } else {
+        console.warn('No profile data returned');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      alert('Error loading profile: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -78,7 +90,14 @@ export default function Profile() {
 
   const handleSaveChanges = async () => {
     try {
-      const { error } = await supabase
+      console.log('Updating profile with data:', {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+        user_id: user.id
+      });
+
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           first_name: formData.first_name,
@@ -86,15 +105,21 @@ export default function Profile() {
           phone: formData.phone,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select();
 
-      if (error) throw error;
+      console.log('Update result:', { data, error });
+
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
 
       alert('Profile updated successfully!');
-      fetchProfile();
+      await fetchProfile();
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Failed to update profile');
+      alert('Failed to update profile: ' + error.message);
     }
   };
 
