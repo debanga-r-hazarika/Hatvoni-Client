@@ -4,7 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function Signup() {
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -50,10 +51,20 @@ export default function Signup() {
       return;
     }
 
+    const hasLowercase = /[a-z]/.test(formData.password);
+    const hasUppercase = /[A-Z]/.test(formData.password);
+    const hasDigit = /[0-9]/.test(formData.password);
+
+    if (!hasLowercase || !hasUppercase || !hasDigit) {
+      setError('Password must contain lowercase, uppercase letters, and digits');
+      setLoading(false);
+      return;
+    }
+
     const { data, error: signUpError } = await signUp(
       formData.email,
       formData.password,
-      { full_name: formData.fullName }
+      { first_name: formData.firstName, last_name: formData.lastName }
     );
 
     if (signUpError) {
@@ -138,20 +149,37 @@ export default function Signup() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-2">
-                Full name
-              </label>
-              <input
-                id="fullName"
-                name="fullName"
-                type="text"
-                required
-                value={formData.fullName}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 outline-none"
-                placeholder="John Doe"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-2">
+                  First name
+                </label>
+                <input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  required
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 outline-none"
+                  placeholder="John"
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-slate-700 mb-2">
+                  Last name
+                </label>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  required
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 outline-none"
+                  placeholder="Doe"
+                />
+              </div>
             </div>
 
             <div>
@@ -184,7 +212,7 @@ export default function Signup() {
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 outline-none"
                 placeholder="••••••••"
               />
-              <p className="mt-1 text-xs text-slate-500">Must be at least 6 characters</p>
+              <p className="mt-1 text-xs text-slate-500">Must contain lowercase, uppercase letters, and digits (min. 6 characters)</p>
             </div>
 
             <div>
