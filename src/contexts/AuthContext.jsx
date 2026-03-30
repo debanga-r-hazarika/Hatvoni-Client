@@ -39,10 +39,26 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (data) {
-        if (!data.avatar_url && sessionUser?.user_metadata?.avatar_url) {
+        const meta = sessionUser?.user_metadata ?? {};
+        const googleFirstName = meta.given_name || meta.first_name || (meta.full_name || meta.name || '').split(' ')[0] || '';
+        const googleLastName = meta.family_name || meta.last_name
+          || (() => { const parts = (meta.full_name || meta.name || '').split(' '); return parts.length > 1 ? parts.slice(1).join(' ') : ''; })();
+        const googleAvatar = meta.avatar_url || meta.picture || '';
+
+        const needsUpdate =
+          (!data.avatar_url && googleAvatar) ||
+          (!data.first_name && googleFirstName) ||
+          (!data.last_name && googleLastName);
+
+        if (needsUpdate) {
+          const patch = { updated_at: new Date().toISOString() };
+          if (!data.avatar_url && googleAvatar) patch.avatar_url = googleAvatar;
+          if (!data.first_name && googleFirstName) patch.first_name = googleFirstName;
+          if (!data.last_name && googleLastName) patch.last_name = googleLastName;
+
           const { data: updated } = await supabase
             .from('profiles')
-            .update({ avatar_url: sessionUser.user_metadata.avatar_url, updated_at: new Date().toISOString() })
+            .update(patch)
             .eq('id', userId)
             .select()
             .maybeSingle();
