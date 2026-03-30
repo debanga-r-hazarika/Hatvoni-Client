@@ -69,8 +69,8 @@ export default function Signup() {
     );
 
     if (signUpError) {
-      if (signUpError.message.includes('already registered') || signUpError.message.includes('User already registered')) {
-        setError('Sorry, you are already registered with this email address. Please sign in or reset your password if you forgot it.');
+      if (signUpError.message.includes('already registered') || signUpError.message.includes('User already registered') || signUpError.message.includes('already exists')) {
+        setError('An account with this email already exists. If you signed up with Google, please use Google sign-in instead. Otherwise, sign in with your email and password.');
       } else {
         setError(signUpError.message);
       }
@@ -99,7 +99,7 @@ export default function Signup() {
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600 mb-2">{error}</p>
-              {(error.includes('already registered') || error.includes('already exists with email/password')) && (
+              {(error.includes('already registered') || error.includes('already exists')) && (
                 <div className="mt-3 pt-3 border-t border-red-100 flex gap-3">
                   <Link
                     to="/login"

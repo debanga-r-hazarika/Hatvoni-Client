@@ -66,8 +66,9 @@ export const AuthProvider = ({ children }) => {
         const identities = session.user.identities || [];
         const hasEmailProvider = identities.some(identity => identity.provider === 'email');
         const hasGoogleProvider = identities.some(identity => identity.provider === 'google');
+        const isLinking = localStorage.getItem('linking_google') === 'true';
 
-        if (hasEmailProvider && hasGoogleProvider && identities.length > 1) {
+        if (hasEmailProvider && hasGoogleProvider && identities.length > 1 && !isLinking) {
           await supabase.auth.signOut();
           setUser(null);
           setProfile(null);
@@ -76,6 +77,11 @@ export const AuthProvider = ({ children }) => {
           localStorage.setItem('authError', 'An account with this email already exists with email/password. Please sign in using your email and password, or use a different Google account.');
           window.location.href = '/login';
           return;
+        }
+
+        if (isLinking) {
+          localStorage.removeItem('linking_google');
+          localStorage.setItem('link_success', 'Google account linked successfully!');
         }
       }
 
@@ -136,6 +142,18 @@ export const AuthProvider = ({ children }) => {
     return { data, error };
   };
 
+  const linkGoogleAccount = async () => {
+    const { data, error } = await supabase.auth.linkIdentity({
+      provider: 'google'
+    });
+    return { data, error };
+  };
+
+  const getAuthProviders = () => {
+    if (!user?.identities) return [];
+    return user.identities.map(identity => identity.provider);
+  };
+
   const value = {
     user,
     profile,
@@ -147,6 +165,8 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     updatePassword,
     signInWithGoogle,
+    linkGoogleAccount,
+    getAuthProviders,
     refreshProfile: () => fetchProfile(user?.id)
   };
 
