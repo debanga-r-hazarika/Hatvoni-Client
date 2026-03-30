@@ -18,6 +18,12 @@ export default function Login() {
       setEmail(savedEmail);
       setRememberMe(true);
     }
+
+    const authError = localStorage.getItem('authError');
+    if (authError) {
+      setError(authError);
+      localStorage.removeItem('authError');
+    }
   }, []);
 
   const handleSubmit = async (e) => {
@@ -51,7 +57,11 @@ export default function Login() {
     setGoogleLoading(true);
     const { error: googleError } = await signInWithGoogle();
     if (googleError) {
-      setError(googleError.message);
+      if (googleError.message.includes('already') || googleError.message.includes('exists')) {
+        setError('An account with this email already exists. Please sign in using your email and password instead.');
+      } else {
+        setError(googleError.message);
+      }
       setGoogleLoading(false);
     }
   };
@@ -68,6 +78,13 @@ export default function Login() {
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">{error}</p>
+              {error.includes('already exists with email/password') && (
+                <div className="mt-3 pt-3 border-t border-red-100">
+                  <p className="text-xs text-red-500">
+                    Sign in below using your email and password to access your account.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

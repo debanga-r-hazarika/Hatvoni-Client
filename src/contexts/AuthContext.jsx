@@ -61,12 +61,27 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      (async () => {
-        setUser(session?.user ?? null);
-        await fetchProfile(session?.user?.id);
-        setLoading(false);
-      })();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const identities = session.user.identities || [];
+        const hasEmailProvider = identities.some(identity => identity.provider === 'email');
+        const hasGoogleProvider = identities.some(identity => identity.provider === 'google');
+
+        if (hasEmailProvider && hasGoogleProvider && identities.length > 1) {
+          await supabase.auth.signOut();
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+
+          localStorage.setItem('authError', 'An account with this email already exists with email/password. Please sign in using your email and password, or use a different Google account.');
+          window.location.href = '/login';
+          return;
+        }
+      }
+
+      setUser(session?.user ?? null);
+      await fetchProfile(session?.user?.id);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
